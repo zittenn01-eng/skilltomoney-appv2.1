@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="스킬투머니 실습실 4장 - 리스트와 반복문(for)으로 강좌 목록 웹앱 만들기">
+  <title>스킬투머니 실습실 · 4장</title>
+  <!-- Pyodide CDN (브라우저에서 파이썬 실행) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+  <style>
+    /* -------------------------------------------------------------
+       CSS RESET & VARIABLES
+       ------------------------------------------------------------- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-deep: #060b19;
+      --bg-navy: #0b152d;
+      --bg-navy-card: rgba(16, 29, 58, 0.85);
+      --bg-navy-light: #132247;
+      --navy-border: rgba(212, 175, 55, 0.22);
+      --navy-border-hover: rgba(230, 194, 96, 0.55);
+
+      --gold-primary: #d4af37;
+      --gold-light: #fff2b2;
+      --gold-bright: #f3ce63;
+      --gold-dark: #a67c1e;
+      --gold-gradient: linear-gradient(135deg, #fff5c0 0%, #f1cf68 35%, #d4af37 70%, #aa7c19 100%);
+      --gold-gradient-soft: linear-gradient(135deg, rgba(243, 206, 99, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+
+      --text-main: #f0f4ff;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --white: #ffffff;
+
+      --shadow-gold: 0 10px 30px -10px rgba(212, 175, 55, 0.4);
+      --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+
+      --transition-fast: 0.2s ease;
+      --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(30, 58, 110, 0.4) 0%, transparent 45%),
+        radial-gradient(circle at 85% 30%, rgba(212, 175, 55, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(19, 34, 71, 0.45) 0%, transparent 60%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .gold-text {
+      background: var(--gold-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: var(--gold-bright);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    /* -------------------------------------------------------------
+       TOP BANNER: 스킬투머니 실습실 · 4장
+       ------------------------------------------------------------- */
+    .top-banner {
+      background: rgba(7, 13, 30, 0.95);
+      border-bottom: 1.5px solid rgba(212, 175, 55, 0.3);
+      padding: 14px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .banner-inner {
+      max-width: 1540px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .banner-brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .banner-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--gold-bright);
+      letter-spacing: -0.01em;
+    }
+
+    .banner-title {
+      font-size: 1.25rem;
+      font-weight: 850;
+      color: var(--white);
+      letter-spacing: -0.02em;
+    }
+
+    .banner-title .gold-accent {
+      background: var(--gold-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: var(--gold-bright);
+    }
+
+    .banner-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .banner-link:hover {
+      color: var(--gold-light);
+      border-color: var(--gold-bright);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    /* -------------------------------------------------------------
+       SPLIT LAYOUT (LEFT: WEB APP / RIGHT: PYTHON CODE)
+       ------------------------------------------------------------- */
+    .lab-layout {
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel-card {
+      background: var(--bg-navy-card);
+      border: 1.5px solid var(--navy-border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color var(--transition-fast);
+    }
+
+    .panel-card:hover {
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+
+    .panel-header-bar {
+      padding: 16px 20px;
+      background: rgba(7, 13, 30, 0.95);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot.red { background: #ef4444; }
+    .dot.yellow { background: #f59e0b; }
+    .dot.green { background: #10b981; }
+
+    .panel-title {
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: -0.02em;
+    }
+
+    .panel-badge {
+      font-size: 0.74rem;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      color: var(--gold-light);
+    }
+
+    .panel-body {
+      padding: 24px 20px;
+    }
+
+    /* -------------------------------------------------------------
+       LEFT PANEL: WEB APP VIEW (4장: 원데이 강좌 목록)
+       ------------------------------------------------------------- */
+    .webapp-header-box {
+      text-align: center;
+      padding-bottom: 18px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .webapp-logo-brand {
+      font-size: 1.85rem;
+      font-weight: 950;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+
+    .webapp-hero-slogan {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: -0.02em;
+    }
+
+    .webapp-hero-slogan span {
+      color: var(--gold-bright);
+      border-bottom: 1.5px solid rgba(212, 175, 55, 0.4);
+      padding-bottom: 1px;
+    }
+
+    /* Course List Header Bar: "원데이 강좌 목록" & [목록 새로 고침] */
+    .course-list-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.18);
+      flex-wrap: wrap;
+    }
+
+    .course-list-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .course-list-main-title {
+      font-size: 1.3rem;
+      font-weight: 850;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .course-list-count-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      font-size: 0.78rem;
+      font-weight: 750;
+      color: var(--gold-light);
+    }
+
+    .btn-refresh-list {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      font-size: 0.88rem;
+      font-weight: 750;
+      color: var(--gold-bright);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.16) 0%, rgba(212, 175, 55, 0.05) 100%);
+      border: 1.5px solid rgba(212, 175, 55, 0.45);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-refresh-list:hover {
+      background: rgba(212, 175, 55, 0.28);
+      border-color: var(--gold-bright);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
+    }
+
+    .btn-refresh-list:active {
+      transform: translateY(0);
+    }
+
+    .btn-refresh-list svg {
+      transition: transform 0.4s ease;
+    }
+
+    .btn-refresh-list:hover svg {
+      transform: rotate(180deg);
+    }
+
+    /* Course Cards Container: 카드가 쌓이는 자리 */
+    .course-cards-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 240px;
+    }
+
+    /* Individual Course Card (print 한 줄 = 카드 한 장) */
+    .course-card {
+      background: linear-gradient(145deg, rgba(16, 30, 66, 0.95) 0%, rgba(8, 16, 36, 0.98) 100%);
+      border: 1.5px solid rgba(212, 175, 55, 0.35);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      transition: all var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+      animation: cardSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes cardSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .course-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.5px;
+      background: linear-gradient(90deg, transparent, #d4af37, #fef08a, #d4af37, transparent);
+      opacity: 0.8;
+      transition: opacity var(--transition-fast);
+    }
+
+    .course-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(243, 206, 99, 0.7);
+      box-shadow: 0 14px 30px -8px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.2);
+    }
+
+    /* 상태별 카드 스타일: 마감 (회색 테마) */
+    .course-card.is-closed {
+      border-color: rgba(148, 163, 184, 0.3);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 15, 30, 0.9) 100%);
+      opacity: 0.88;
+    }
+
+    .course-card.is-closed::before {
+      background: linear-gradient(90deg, transparent, #64748b, #94a3b8, transparent);
+      opacity: 0.5;
+    }
+
+    /* 상태별 카드 스타일: 마감 임박 (빨간 테마) */
+    .course-card.is-urgent {
+      border-color: rgba(239, 68, 68, 0.55);
+      box-shadow: 0 8px 25px -6px rgba(239, 68, 68, 0.25);
+    }
+
+    .course-card.is-urgent::before {
+      background: linear-gradient(90deg, transparent, #ef4444, #fca5a5, transparent);
+      opacity: 0.9;
+    }
+
+    .course-card-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .course-card-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .course-icon-badge {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      border-radius: var(--radius-sm);
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      user-select: none;
+    }
+
+    .course-card.is-closed .course-icon-badge {
+      background: rgba(148, 163, 184, 0.1);
+      border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .course-card.is-urgent .course-icon-badge {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .course-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .course-title-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .course-type-pill {
+      font-size: 0.72rem;
+      font-weight: 750;
+      color: var(--gold-bright);
+      background: rgba(212, 175, 55, 0.14);
+      padding: 1px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      letter-spacing: -0.01em;
+    }
+
+    /* 강좌 이름 굵게 */
+    .course-title-text {
+      font-size: 1.15rem;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .course-title-text strong,
+    strong.course-name-bold {
+      font-weight: 850;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+
+    .card-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      color: #cbd5e1;
+      flex-wrap: wrap;
+    }
+
+    .meta-price {
+      font-weight: 800;
+      color: var(--gold-bright);
+      font-size: 1.02rem;
+      letter-spacing: -0.01em;
+    }
+
+    .meta-divider {
+      color: #475569;
+      font-weight: 400;
+    }
+
+    .meta-seat {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .meta-seat strong {
+      color: #f1f5f9;
+      font-weight: 750;
+    }
+
+    .seat-zero {
+      color: #94a3b8 !important;
+    }
+
+    .seat-urgent {
+      color: #ef4444 !important;
+      font-weight: 850 !important;
+    }
+
+    .meta-custom-desc {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+    }
+
+    .course-card-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Badges */
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 13px;
+      border-radius: var(--radius-full);
+      font-size: 0.84rem;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    /* 회색 "마감" 표시 */
+    .badge-closed {
+      background: rgba(148, 163, 184, 0.16);
+      border: 1.5px solid rgba(148, 163, 184, 0.4);
+      color: #94a3b8; /* 회색 마감 */
+      font-weight: 750;
+    }
+
+    /* 빨간 글씨 "[마감 임박]" */
+    .badge-urgent {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1.5px solid rgba(239, 68, 68, 0.55);
+      color: #ef4444; /* 빨간 글씨 */
+      font-weight: 850;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);
+      animation: pulseUrgent 2s infinite;
+    }
+
+    @keyframes pulseUrgent {
+      0%, 100% {
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.45);
+      }
+    }
+
+    /* 빈 목록 상태 / 로딩 상태 안내 */
+    .empty-cards-state {
+      padding: 40px 20px;
+      text-align: center;
+      background: rgba(7, 13, 30, 0.4);
+      border: 1.5px dashed rgba(212, 175, 55, 0.25);
+      border-radius: var(--radius-md);
+      color: #94a3b8;
+    }
+
+    .empty-cards-state .empty-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .empty-cards-state p {
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    /* -------------------------------------------------------------
+       RIGHT PANEL: PYTHON CODE EDITOR
+       ------------------------------------------------------------- */
+    .code-panel-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .editor-wrapper {
+      background: #060a17;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
+      display: flex;
+      min-height: 380px;
+    }
+
+    .line-numbers {
+      padding: 16px 10px;
+      background: #040711;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      color: #475569;
+      font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      text-align: right;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      min-width: 42px;
+    }
+
+    .code-textarea {
+      flex: 1;
+      padding: 16px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e2e8f0;
+      font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+      font-size: 0.96rem;
+      line-height: 1.65;
+      resize: vertical;
+      min-height: 380px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .code-textarea:focus {
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .code-action-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-top: 6px;
+    }
+
+    .action-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .action-left-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: none;
+    }
+
+    .btn-gold {
+      background: var(--gold-gradient);
+      color: #070d1e;
+      box-shadow: var(--shadow-gold);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-gold:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px -8px rgba(212, 175, 55, 0.6);
+    }
+
+    .btn-gold:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-gold:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(40%);
+    }
+
+    .btn-apply-code {
+      padding: 12px 24px;
+      font-size: 0.98rem;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .btn-reset-code {
+      padding: 11px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-reset-code:hover {
+      background: rgba(212, 175, 55, 0.12);
+      border-color: var(--gold-bright);
+      color: #ffffff;
+    }
+
+    .btn-download-colab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-download-colab:hover {
+      background: rgba(251, 191, 36, 0.22);
+      border-color: #fbbf24;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(251, 191, 36, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Pyodide status indicator */
+    .py-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .py-status.loading {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.1);
+    }
+
+    .py-status.ready {
+      color: #34d399;
+      border-color: rgba(52, 211, 153, 0.35);
+      background: rgba(52, 211, 153, 0.1);
+    }
+
+    .py-status.error {
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.1);
+    }
+
+    .status-spinner {
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(251, 191, 36, 0.3);
+      border-top-color: #fbbf24;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Feedback & Status Message Area */
+    .exec-feedback-area {
+      width: 100%;
+    }
+
+    .feedback-msg {
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      line-height: 1.65;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      animation: fadeIn 0.25s ease;
+      word-break: keep-all;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Green: Success */
+    .feedback-msg.success {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-weight: 700;
+    }
+
+    /* Red: Error */
+    .feedback-msg.error {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      font-weight: 700;
+    }
+
+    /* Orange: Unconnected / No WebApp change */
+    .feedback-msg.warning {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      font-weight: 600;
+    }
+
+    .unconnected-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(251, 191, 36, 0.2);
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.82rem;
+    }
+
+    /* Colab Download Button inside Orange Banner */
+    .btn-colab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%);
+      border: 1px solid #fbbf24;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      margin: 0 4px;
+      vertical-align: middle;
+    }
+
+    .btn-colab:hover {
+      background: #fbbf24;
+      color: #070d1e;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+    }
+
+    /* -------------------------------------------------------------
+       RESPONSIVE DESIGN (모바일: 위아래 배치)
+       ------------------------------------------------------------- */
+    @media (max-width: 1024px) {
+      .lab-layout {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 20px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .banner-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .banner-title {
+        font-size: 1.1rem;
+      }
+      .panel-body {
+        padding: 18px 14px;
+      }
+      .code-panel-body {
+        padding: 16px 12px;
+      }
+      .action-top-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .action-left-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn-apply-code, .btn-reset-code, .btn-download-colab {
+        width: 100%;
+        justify-content: center;
+      }
+      .py-status {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .course-card-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .course-card-right {
+        align-self: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       TOP BANNER: 스킬투머니 실습실 · 4장
+       ========================================== -->
+  <header class="top-banner">
+    <div class="banner-inner">
+      <div class="banner-brand-group">
+        <span class="banner-badge">LAB 04</span>
+        <h1 class="banner-title">
+          <span class="gold-accent">스킬투머니 실습실</span> &middot; 4장
+        </h1>
+      </div>
+      <div>
+        <a href="/" class="banner-link">
+          <span>&larr;</span>
+          <span>메인 소개 페이지로 돌아가기</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       MAIN LAB SPLIT LAYOUT (LEFT / RIGHT)
+       ========================================== -->
+  <main class="lab-layout">
+
+    <!-- ==========================================
+         LEFT PANEL: 웹앱 화면 (원데이 강좌 목록)
+         ========================================== -->
+    <section class="panel-card" aria-label="웹앱 화면">
+      <div class="panel-header-bar">
+        <div class="panel-title-group">
+          <div class="window-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <h2 class="panel-title">웹앱 화면</h2>
+        </div>
+        <span class="panel-badge">실시간 프리뷰</span>
+      </div>
+
+      <div class="panel-body">
+        <!-- 머리글 (서비스명 및 한 줄 소개) -->
+        <div class="webapp-header-box">
+          <h3 class="webapp-logo-brand gold-text">스킬투머니</h3>
+          <p class="webapp-hero-slogan">배운 기술을 돈으로, <span>원데이 강좌 플랫폼</span></p>
+        </div>
+
+        <!-- 원데이 강좌 목록 제목 & [목록 새로 고침] 버튼 -->
+        <div class="course-list-header-bar">
+          <div class="course-list-title-group">
+            <h3 class="course-list-main-title">원데이 강좌 목록</h3>
+            <span class="course-list-count-badge" id="course-count-badge">강좌 목록 불러오는 중...</span>
+          </div>
+          <button type="button" class="btn btn-refresh-list" id="btn-refresh-list" onclick="runPythonCode()" title="파이썬 코드를 다시 실행하여 목록을 새로 고칩니다">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>목록 새로 고침</span>
+          </button>
+        </div>
+
+        <!-- 카드가 쌓이는 자리 (파이썬 print 한 줄 = 강좌 카드 한 장) -->
+        <div id="course-cards-container" class="course-cards-container" aria-live="polite">
+          <div class="empty-cards-state">
+            <span class="status-spinner" style="width:24px; height:24px; margin-bottom:12px;"></span>
+            <p>파이썬 실행 엔진(Pyodide)을 준비하고 있습니다. 잠시만 기다려 주세요...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         RIGHT PANEL: 이 웹앱을 움직이는 파이썬 코드
+         ========================================== -->
+    <section class="panel-card" aria-label="파이썬 코드 편집기">
+      <div class="panel-header-bar">
+        <div class="panel-title-group">
+          <div class="window-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <h2 class="panel-title">이 웹앱을 움직이는 파이썬 코드</h2>
+        </div>
+        <span class="panel-badge">Python 3 (Pyodide)</span>
+      </div>
+
+      <div class="code-panel-body">
+        <!-- 코드 작성 큰 칸 (어두운 배경, 고정폭 글꼴, 왼쪽에 줄 번호) -->
+        <div class="editor-wrapper">
+          <div class="line-numbers" id="line-numbers">
+            <span>1</span>
+            <span>2</span>
+            <span>3</span>
+            <span>4</span>
+            <span>5</span>
+            <span>6</span>
+            <span>7</span>
+            <span>8</span>
+            <span>9</span>
+            <span>10</span>
+            <span>11</span>
+            <span>12</span>
+            <span>13</span>
+            <span>14</span>
+            <span>15</span>
+          </div>
+          <textarea class="code-textarea" id="python-code" spellcheck="false" rows="15">names = ["AI 자동화", "숏폼 편집", "엑셀 실무"]
+prices = [35000, 45000, 30000]
+seats = [8, 6, 10]
+booked = [8, 2, 7]
+for i in range(0, 3, 1):
+    left = seats[i] - booked[i]
+    if left == 0:
+        state = "[마감]"
+    elif left <= 2:
+        state = "[마감 임박]"
+    else:
+        state = ""
+    print(names[i], prices[i], "원 / 남은 자리", left, "석", state)</textarea>
+        </div>
+
+        <!-- 버튼 및 상태 안내 -->
+        <div class="code-action-box">
+          <div class="action-top-row">
+            <div class="action-left-group">
+              <!-- [▶ 웹앱에 적용하기] 버튼 -->
+              <button type="button" class="btn btn-gold btn-apply-code" id="btn-apply" onclick="runPythonCode()" disabled>
+                <span>▶ 웹앱에 적용하기</span>
+              </button>
+              <!-- [처음 코드로] 버튼 -->
+              <button type="button" class="btn btn-reset-code" id="btn-reset" onclick="resetToInitialCode()">
+                <span>처음 코드로</span>
+              </button>
+              <!-- [⬇ 코랩 노트북(.ipynb)으로 받기] 버튼 -->
+              <button type="button" class="btn btn-download-colab" id="btn-colab-download" onclick="downloadColabNotebook()">
+                <span>⬇ 코랩 노트북(.ipynb)으로 받기</span>
+              </button>
+            </div>
+            <!-- 준비 상태 표시 -->
+            <div id="py-status" class="py-status loading">
+              <span class="status-spinner"></span>
+              <span>파이썬 로딩 중...</span>
+            </div>
+          </div>
+
+          <!-- 상태/오류/성공 피드백 메시지 영역 -->
+          <div id="exec-feedback" class="exec-feedback-area"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       PYODIDE & WEB APP INTERACTION SCRIPTS
+       ========================================== -->
+  <script>
+    // 4장 처음 기본 코드
+    const INITIAL_PYTHON_CODE = `names = ["AI 자동화", "숏폼 편집", "엑셀 실무"]
+prices = [35000, 45000, 30000]
+seats = [8, 6, 10]
+booked = [8, 2, 7]
+for i in range(0, 3, 1):
+    left = seats[i] - booked[i]
+    if left == 0:
+        state = "[마감]"
+    elif left <= 2:
+        state = "[마감 임박]"
+    else:
+        state = ""
+    print(names[i], prices[i], "원 / 남은 자리", left, "석", state)`;
+
+    let pyodideInstance = null;
+    let isPyodideReady = false;
+    let printedLines = [];
+    let extraInputUsed = false;
+    let extraInputPromptName = "";
+
+    // 이전 웹앱 상태 스냅샷 (달라진 점 감지용)
+    let previousWebappState = {
+      cardCount: 0,
+      contentKey: ""
+    };
+
+    // 파이썬 input(prompt) 감지 브릿지 함수 (4장은 input을 쓰지 않으므로 사용 감지 시 안내)
+    window.pyCustomInput = function(promptText) {
+      extraInputUsed = true;
+      extraInputPromptName = (promptText && typeof promptText === 'string') ? promptText.trim() : "input()";
+      return "";
+    };
+
+    // 파이썬 print(*args) 호출 시 자바스크립트가 수집하는 브릿지 함수
+    window.pyCustomPrint = function(text) {
+      printedLines.push(String(text));
+    };
+
+    // Pyodide 초기화 함수
+    async function initPyodide() {
+      const statusEl = document.getElementById('py-status');
+      const applyBtn = document.getElementById('btn-apply');
+      const refreshBtn = document.getElementById('btn-refresh-list');
+
+      try {
+        pyodideInstance = await loadPyodide();
+
+        // 파이썬 builtins의 input과 print를 자바스크립트와 연동
+        await pyodideInstance.runPythonAsync(`
+import builtins
+import js
+
+def _custom_input(prompt=""):
+    return str(js.pyCustomInput(str(prompt)))
+
+def _custom_print(*args, **kwargs):
+    sep = kwargs.get('sep', ' ')
+    text = sep.join(str(a) for a in args)
+    js.pyCustomPrint(text)
+
+builtins.input = _custom_input
+builtins.print = _custom_print
+`);
+
+        isPyodideReady = true;
+
+        // 상태 배지 '준비 완료'로 갱신
+        if (statusEl) {
+          statusEl.className = 'py-status ready';
+          statusEl.innerHTML = '<span style="color:#10b981; font-size:1.1rem; line-height:1;">✓</span> <span>파이썬 준비 완료</span>';
+        }
+
+        // 버튼 활성화
+        if (applyBtn) applyBtn.disabled = false;
+        if (refreshBtn) refreshBtn.disabled = false;
+
+        // 페이지를 열면 코드를 한 번 실행해 카드를 그려 줌
+        await runPythonCode(true);
+
+      } catch (err) {
+        console.error('Pyodide 로딩 실패:', err);
+        if (statusEl) {
+          statusEl.className = 'py-status error';
+          statusEl.innerHTML = '<span>⚠️ 파이썬 준비 실패 (네트워크 확인 필요)</span>';
+        }
+        const container = document.getElementById('course-cards-container');
+        if (container) {
+          container.innerHTML = `
+            <div class="empty-cards-state">
+              <span class="empty-icon">⚠️</span>
+              <p>파이썬 엔진을 불러오지 못했습니다. 인터넷 연결을 확인하고 페이지를 새로고침해 주세요.</p>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // 파이썬 에러 파싱 함수 (SyntaxError, NameError, TypeError, ValueError, IndentationError 등)
+    function parsePythonError(err) {
+      const errMsg = String(err.message || err);
+
+      // 줄 번호 추출 (예: line 4)
+      const lineMatch = errMsg.match(/line (\d+)/i);
+      const lineNum = lineMatch ? lineMatch[1] : null;
+
+      // 1. IndentationError (들여쓰기 오류) - SyntaxError보다 먼저 검사
+      if (errMsg.includes("IndentationError")) {
+        return {
+          type: "IndentationError",
+          line: lineNum,
+          title: "들여쓰기 오류",
+          desc: "줄 맨 앞의 공백(띄어쓰기) 칸 수가 맞지 않습니다. for 문이나 if 문 안쪽 들여쓰기를 확인하세요."
+        };
+      }
+
+      // 2. SyntaxError (문법 오류)
+      if (errMsg.includes("SyntaxError")) {
+        return {
+          type: "SyntaxError",
+          line: lineNum,
+          title: "문법 오류",
+          desc: "문법 규칙에 맞지 않는 부분이 있습니다. 괄호, 따옴표나 콜론(:)이 빠지지 않았는지 확인하세요."
+        };
+      }
+
+      // 3. NameError (이름 오류)
+      if (errMsg.includes("NameError")) {
+        return {
+          type: "NameError",
+          line: lineNum,
+          title: "이름 오류",
+          desc: "변수나 리스트 이름의 철자가 맞는지 확인하세요. 정의하지 않은 변수를 사용했거나 오타가 있을 수 있습니다."
+        };
+      }
+
+      // 4. IndexError (인덱스 범위 오류)
+      if (errMsg.includes("IndexError")) {
+        return {
+          type: "IndexError",
+          line: lineNum,
+          title: "인덱스 범위 오류",
+          desc: "리스트의 범위를 벗어난 번호(인덱스)를 조회했습니다. range() 범위나 리스트 길이를 확인하세요."
+        };
+      }
+
+      // 5. TypeError (자료형 오류)
+      if (errMsg.includes("TypeError")) {
+        return {
+          type: "TypeError",
+          line: lineNum,
+          title: "자료형 오류",
+          desc: "문자열과 숫자처럼 서로 계산할 수 없는 자료형을 연산했는지 확인하세요."
+        };
+      }
+
+      // 6. ValueError (값 오류)
+      if (errMsg.includes("ValueError")) {
+        return {
+          type: "ValueError",
+          line: lineNum,
+          title: "값 오류",
+          desc: "올바른 형태의 값이 들어가지 않았습니다. 값의 형태를 확인하세요."
+        };
+      }
+
+      // 7. ModuleNotFoundError / ImportError (웹앱과 연결되지 않은 모듈)
+      if (errMsg.includes("ModuleNotFoundError") || errMsg.includes("ImportError")) {
+        const modMatch = errMsg.match(/No module named '([^']+)'/) || errMsg.match(/cannot import name '([^']+)'/);
+        const modName = modMatch ? modMatch[1] : "외부 모듈";
+        return {
+          type: "ImportError",
+          isUnconnected: true,
+          modName: modName
+        };
+      }
+
+      return {
+        type: "GeneralError",
+        line: lineNum,
+        title: "실행 오류",
+        desc: "코드 실행 중 오류가 발생했습니다. 코드 내용을 다시 확인해 보세요."
+      };
+    }
+
+    // 주황색 안내 메시지 출력 (웹앱 미반영 / input 사용 / 모듈 import 시)
+    function showOrangeNotice(extraDetail) {
+      const feedbackEl = document.getElementById('exec-feedback');
+      if (!feedbackEl) return;
+
+      let detailHtml = extraDetail ? ` <span class="unconnected-tag">${escapeHtml(extraDetail)}</span>` : '';
+
+      feedbackEl.innerHTML = `
+        <div class="feedback-msg warning">
+          <span>⚠️ 코드는 바르게 실행되었지만 왼쪽 웹앱에서 달라진 것이 없습니다. 파이썬 문법이 틀린 것이 아니라, 이 실습실에서 그 부분이 웹앱과 연결되어 있지 않을 뿐입니다.</span>
+          ${detailHtml}
+          <span>
+            <button type="button" class="btn-colab" onclick="downloadColabNotebook()">⬇ 코랩 노트북으로 받기</button>
+            로 코드를 받아 코랩에서 실행해 결과를 확인해 보세요.
+          </span>
+        </div>
+      `;
+    }
+
+    // 빨간색 오류 메시지 출력 (SyntaxError, NameError, TypeError, ValueError, IndentationError 등)
+    function showRedError(parsed) {
+      const feedbackEl = document.getElementById('exec-feedback');
+      if (!feedbackEl) return;
+
+      const lineStr = parsed.line ? `${parsed.line}번째 줄 ` : "";
+      feedbackEl.innerHTML = `
+        <div class="feedback-msg error">
+          <span>❌ ${lineStr}${parsed.title}: ${parsed.desc}</span>
+        </div>
+      `;
+    }
+
+    // 초록색 성공 메시지 출력
+    function showGreenSuccess(msg) {
+      const feedbackEl = document.getElementById('exec-feedback');
+      if (!feedbackEl) return;
+
+      feedbackEl.innerHTML = `
+        <div class="feedback-msg success">
+          <span>✔ ${msg || '파이썬 코드가 웹앱에 적용되었습니다.'}</span>
+        </div>
+      `;
+    }
+
+    // print() 한 줄 문자열을 파싱하여 카드 데이터 객체로 변환
+    function parsePrintLine(line, knownNames) {
+      const raw = String(line).trim();
+      if (!raw) return null;
+
+      // 1. 상태 파악 ([마감] 또는 [마감 임박] 또는 없음)
+      let statusType = 'normal';
+      let statusBadgeHtml = '';
+
+      if (raw.includes('[마감]')) {
+        statusType = 'closed';
+        // 회색 "마감" 표시
+        statusBadgeHtml = '<span class="course-badge badge-closed">마감</span>';
+      } else if (raw.includes('[마감 임박]')) {
+        statusType = 'urgent';
+        // 빨간 글씨 "[마감 임박]"
+        statusBadgeHtml = '<span class="course-badge badge-urgent">마감 임박</span>';
+      }
+
+      // 상태 태그 문자열을 제외한 순수 정보 추출
+      let cleanLine = raw
+        .replace(/\[마감\s*임박\]/g, '')
+        .replace(/\[마감\]/g, '')
+        .trim();
+
+      let courseName = '';
+      let remainder = '';
+
+      // A. names 리스트에서 시작하는 이름이 있는지 우선 매칭
+      if (Array.isArray(knownNames) && knownNames.length > 0) {
+        const sortedNames = [...knownNames].filter(Boolean).map(String).sort((a, b) => b.length - a.length);
+        for (const name of sortedNames) {
+          if (cleanLine.startsWith(name)) {
+            courseName = name;
+            remainder = cleanLine.slice(name.length).trim();
+            break;
+          }
+        }
+      }
+
+      // B. names로 일치하지 않을 때 패턴 매칭
+      // 예: "AI 자동화 35000 원 / 남은 자리 0 석"
+      if (!courseName) {
+        const match = cleanLine.match(/^(.+?)\s+(\d[\d,]*\s*원.*)$/);
+        if (match) {
+          courseName = match[1].trim();
+          remainder = match[2].trim();
+        } else {
+          // 공백 기준 맨 앞 단어를 강좌 이름으로 분리
+          const parts = cleanLine.split(/\s+/);
+          courseName = parts[0];
+          remainder = parts.slice(1).join(' ').trim();
+        }
+      }
+
+      // C. 수강료와 남은 자리 파싱
+      let priceStr = '';
+      let seatStr = '';
+      let formattedRemainderHtml = '';
+
+      const priceSeatMatch = remainder.match(/^(\d[\d,]*)\s*원\s*[\/\·]?\s*남은\s*자리\s*(\d+)\s*석/);
+      if (priceSeatMatch) {
+        const numPrice = Number(priceSeatMatch[1].replace(/,/g, ''));
+        priceStr = !isNaN(numPrice) ? numPrice.toLocaleString() + '원' : priceSeatMatch[1] + '원';
+        const seatNum = parseInt(priceSeatMatch[2], 10);
+        const seatZeroClass = (seatNum === 0) ? 'seat-zero' : (seatNum <= 2 ? 'seat-urgent' : '');
+        seatStr = `남은 자리 <strong class="seat-num ${seatZeroClass}">${seatNum}</strong>석`;
+
+        formattedRemainderHtml = `
+          <div class="card-meta-row">
+            <span class="meta-price">${escapeHtml(priceStr)}</span>
+            <span class="meta-divider">/</span>
+            <span class="meta-seat">${seatStr}</span>
+          </div>
+        `;
+      } else if (remainder) {
+        formattedRemainderHtml = `
+          <div class="card-meta-row">
+            <span class="meta-custom-desc">${escapeHtml(remainder)}</span>
+          </div>
+        `;
+      }
+
+      // 강좌별 맞춤 아이콘
+      let icon = '🎯';
+      if (courseName.includes('AI') || courseName.includes('자동화')) icon = '⚡';
+      else if (courseName.includes('숏폼') || courseName.includes('영상') || courseName.includes('편집')) icon = '🎬';
+      else if (courseName.includes('엑셀') || courseName.includes('데이터')) icon = '📊';
+      else if (courseName.includes('스토어') || courseName.includes('쇼핑') || courseName.includes('커머스')) icon = '🛍️';
+      else if (courseName.includes('파이썬') || courseName.includes('코딩') || courseName.includes('웹')) icon = '💻';
+
+      return {
+        courseName,
+        statusType,
+        statusBadgeHtml,
+        formattedRemainderHtml,
+        icon
+      };
+    }
+
+    // 파싱된 데이터로 개별 강좌 카드 DOM 엘리먼트 생성
+    function createCourseCardElement(item) {
+      const card = document.createElement('div');
+      const stateClass = item.statusType === 'closed' ? 'is-closed' : (item.statusType === 'urgent' ? 'is-urgent' : '');
+      card.className = `course-card ${stateClass}`;
+
+      card.innerHTML = `
+        <div class="course-card-inner">
+          <div class="course-card-left">
+            <div class="course-icon-badge">${item.icon}</div>
+            <div class="course-card-info">
+              <div class="course-title-line">
+                <span class="course-type-pill">원데이</span>
+                <h4 class="course-title-text"><strong class="course-name-bold">${escapeHtml(item.courseName)}</strong></h4>
+              </div>
+              ${item.formattedRemainderHtml}
+            </div>
+          </div>
+          <div class="course-card-right">
+            ${item.statusBadgeHtml}
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    // 파이썬 코드 실행 함수 ([▶ 웹앱에 적용하기] 및 [목록 새로 고침] 클릭 시 실행)
+    async function runPythonCode(isInitialRun = false) {
+      if (!isPyodideReady || !pyodideInstance) {
+        alert('파이썬을 준비하고 있습니다. 잠시만 기다려 주세요...');
+        return;
+      }
+
+      const textarea = document.getElementById('python-code');
+      const container = document.getElementById('course-cards-container');
+      const countBadge = document.getElementById('course-count-badge');
+      const userCode = textarea.value;
+
+      printedLines = [];         // 출력 버퍼 초기화
+      extraInputUsed = false;    // input() 사용 감지 초기화
+      extraInputPromptName = "";
+
+      // 실행 전 파이썬 유저 변수 목록 수집
+      let varsBefore = [];
+      try {
+        varsBefore = pyodideInstance.runPython(`
+import builtins
+list(k for k in globals().keys() if not k.startswith('_') and k not in ('builtins', 'js', '_custom_input', '_custom_print', 'sys', 'io'))
+`).toJs();
+      } catch (e) {
+        varsBefore = [];
+      }
+
+      try {
+        // 편집기에 작성된 파이썬 코드 비동기 실행
+        await pyodideInstance.runPythonAsync(userCode);
+
+        // input() 사용 감지 시 주황색 안내 출력 (4장은 input 미사용)
+        if (extraInputUsed) {
+          showOrangeNotice(`4장 실습실은 input() 입력을 쓰지 않는 예제입니다. [${extraInputPromptName}] 대신 코랩에서 테스트해 보세요.`);
+          return;
+        }
+
+        // 실행 후 파이썬 유저 변수 목록 수집
+        let varsAfter = [];
+        try {
+          varsAfter = pyodideInstance.runPython(`
+import builtins
+list(k for k in globals().keys() if not k.startswith('_') and k not in ('builtins', 'js', '_custom_input', '_custom_print', 'sys', 'io'))
+`).toJs();
+        } catch (e) {
+          varsAfter = [];
+        }
+
+        // names 변수 내용 읽기
+        let knownNames = [];
+        try {
+          const namesPy = pyodideInstance.globals.get('names');
+          if (namesPy) {
+            knownNames = namesPy.toJs();
+          }
+        } catch (e) {
+          knownNames = [];
+        }
+
+        // print() 출력 결과로 강좌 카드 리스트 렌더링
+        const validLines = printedLines.filter(line => String(line).trim().length > 0);
+
+        if (validLines.length === 0) {
+          // print() 출력이 하나도 없는 경우
+          if (container) {
+            container.innerHTML = `
+              <div class="empty-cards-state">
+                <span class="empty-icon">📋</span>
+                <p>출력된 강좌가 없습니다.<br>for 문 안의 <strong>print(...)</strong> 코드로 강좌 정보를 출력해 보세요.</p>
+              </div>
+            `;
+          }
+          if (countBadge) {
+            countBadge.innerText = '0개 강좌';
+          }
+          showOrangeNotice("print() 함수로 출력된 내용이 없어 강좌 카드가 그려지지 않았습니다.");
+          return;
+        }
+
+        // 카드 렌더링
+        if (container) {
+          container.innerHTML = '';
+          validLines.forEach(line => {
+            const parsed = parsePrintLine(line, knownNames);
+            if (parsed) {
+              const cardEl = createCourseCardElement(parsed);
+              container.appendChild(cardEl);
+            }
+          });
+        }
+
+        if (countBadge) {
+          countBadge.innerText = `총 ${validLines.length}개 강좌`;
+        }
+
+        const currentContentKey = validLines.join('||');
+        const hasChanged = (currentContentKey !== previousWebappState.contentKey);
+        previousWebappState = {
+          cardCount: validLines.length,
+          contentKey: currentContentKey
+        };
+
+        // 연결된 핵심 변수 및 미연결 변수 파악
+        const connectedVars = new Set(['names', 'prices', 'seats', 'booked', 'i', 'left', 'state']);
+        const unlinkedVars = varsAfter.filter(v => !connectedVars.has(v));
+
+        if (isInitialRun) {
+          showGreenSuccess("파이썬 코드가 웹앱에 적용되었습니다.");
+        } else if (unlinkedVars.length > 0 && !hasChanged) {
+          showOrangeNotice(`바뀐 변수: ${unlinkedVars.join(', ')}`);
+        } else {
+          showGreenSuccess(`강좌 목록 ${validLines.length}개가 웹앱에 적용되었습니다.`);
+        }
+
+      } catch (err) {
+        console.error('파이썬 코드 실행 에러:', err);
+
+        const parsed = parsePythonError(err);
+
+        // 모듈 import 관련 오류는 주황색 안내
+        if (parsed.isUnconnected) {
+          showOrangeNotice(`사용된 모듈: ${parsed.modName}`);
+        } else {
+          // 문법, 이름, 들여쓰기, 자료형 등 오류는 빨간색 출력
+          showRedError(parsed);
+        }
+      }
+    }
+
+    // [처음 코드로] 버튼 핸들러
+    function resetToInitialCode() {
+      const textarea = document.getElementById('python-code');
+      textarea.value = INITIAL_PYTHON_CODE;
+      updateLineNumbers();
+      runPythonCode();
+    }
+
+    // [⬇ 코랩 노트북(.ipynb)으로 받기] 다운로드 핸들러 (ch04_lab.ipynb 파일 생성)
+    function downloadColabNotebook() {
+      const currentCode = document.getElementById('python-code').value;
+
+      const notebookContent = {
+        nbformat: 4,
+        nbformat_minor: 2,
+        metadata: {
+          colab: {
+            provenance: [],
+            name: "ch04_lab.ipynb"
+          },
+          kernelspec: {
+            name: "python3",
+            display_name: "Python 3"
+          },
+          language_info: {
+            name: "python"
+          }
+        },
+        cells: [
+          {
+            cell_type: "markdown",
+            metadata: {},
+            source: [
+              "4장 실습실에서 만든 강좌 목록 코드입니다. 셀을 실행하면 강좌 목록과 잔여 좌석 상태가 계산되어 출력됩니다."
+            ]
+          },
+          {
+            cell_type: "code",
+            metadata: {},
+            execution_count: null,
+            outputs: [],
+            source: currentCode.split('\n').map((line, idx, arr) => idx < arr.length - 1 ? line + '\n' : line)
+          }
+        ]
+      };
+
+      const blob = new Blob([JSON.stringify(notebookContent, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ch04_lab.ipynb";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      // 다운로드 완료 안내 메시지 표시
+      const feedbackEl = document.getElementById('exec-feedback');
+      if (feedbackEl) {
+        feedbackEl.innerHTML = `
+          <div class="feedback-msg success">
+            <span>✔ ch04_lab.ipynb를 내려받았습니다. 코랩 [파일] → [노트북 업로드]로 여세요.</span>
+            <a href="https://colab.research.google.com/" target="_blank" rel="noopener noreferrer" class="btn-colab" style="margin-left: 8px;">코랩 바로가기 ↗</a>
+          </div>
+        `;
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // 파이썬 코드 에디터 줄 번호 자동 갱신
+    const textarea = document.getElementById('python-code');
+    const lineNumbers = document.getElementById('line-numbers');
+
+    function updateLineNumbers() {
+      const lineCount = textarea.value.split('\n').length;
+      const count = Math.max(lineCount, 15);
+      let numbersHtml = '';
+      for (let i = 1; i <= count; i++) {
+        numbersHtml += '<span>' + i + '</span>';
+      }
+      lineNumbers.innerHTML = numbersHtml;
+    }
+
+    textarea.addEventListener('input', updateLineNumbers);
+
+    // Ctrl+Enter 또는 Cmd+Enter 누르면 바로 실행
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runPythonCode();
+      }
+    });
+
+    // 페이지 로드 시 Pyodide 초기화 시작
+    window.addEventListener('DOMContentLoaded', () => {
+      initPyodide();
+      updateLineNumbers();
+    });
+  </script>
+</body>
+</html>

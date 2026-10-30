@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chrome으로 localhost 열기",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Next.js 서버 실행 + Chrome 자동 열기",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm.cmd run dev",
+      "serverReadyAction": {
+        "pattern": "- Local:\\s*(https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
+    }
+  ]
+}
+
